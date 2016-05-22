@@ -77,13 +77,14 @@ class shutit_docker_dev(ShutItModule):
 		module_name = 'shutit_docker_dev_' + ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(6))
 		shutit.send('rm -rf /tmp/' + module_name + ' && mkdir -p /tmp/' + module_name + ' && cd /tmp/' + module_name)
 		shutit.send('vagrant init ' + vagrant_image)
-		shutit.send_file('Vagrantfile','''
+		currdir = shutit.send_and_get_output('pwd')
+		shutit.send_file(currdir+'/Vagrantfile','''
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/xenial64"
   config.vm.provider "virtualbox" do |vb|
      vb.memory = "2048"
+  end
 end''')
-		shutit.pause_point('vag up')
 		shutit.send('vagrant up --provider virtualbox',timeout=99999)
 		shutit.login(command='vagrant ssh')
 		shutit.login(command='sudo su -',password='vagrant')
@@ -92,7 +93,12 @@ end''')
 		shutit.install('git docker.io make')
 		shutit.send('git clone https://git@github.com/docker/docker')
 		shutit.send('cd docker')
+		shutit.send('swapoff -a')
+		shutit.pause_point('Develop away!')
 		shutit.send('make binary')
+		shutit.send('rm /usr/local/bin/docker')
+		shutit.send('ln -s $PWD/bundles/1.12.0-dev/binary/docker-1.12.0-dev /usr/local/bin/docker')
+		#TODO: daemon
 
 		shutit.logout()
 		shutit.logout()
